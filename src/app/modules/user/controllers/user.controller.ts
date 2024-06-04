@@ -12,7 +12,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { SuccessResponse } from '@src/app/types';
 import { FilterRoleDTO } from '../../acl/dtos';
 import { Role } from '../../acl/entities/role.entity';
-import { CreateUserDTO, FilterUserDTO, UpdateUserDTO } from '../dtos';
+import { CreateUserDTO, CreateUsersDTO, FilterUserDTO, UpdateUserDTO } from '../dtos';
 import { User } from '../entities/user.entity';
 import { UserService } from '../services/user.service';
 
@@ -43,11 +43,15 @@ export class UserController {
     return this.service.findByIdBase(id, { relations: this.RELATIONS });
   }
 
-  @Post()
-  async createOne(@Body() body: CreateUserDTO): Promise<User> {
-    return this.service.createUser(body, this.RELATIONS);
+  @Post('register')
+  async createOne(@Body() body: CreateUsersDTO): Promise<User> {
+    return this.service.createUserroletitle(body, this.RELATIONS);
   }
 
+  @Post('create')
+  async createOnee(@Body() body: CreateUserDTO): Promise<User> {
+    return this.service.createUserbyroleid(body, this.RELATIONS);
+  }
   //   @Post('recover/:id')
   //   async recoverById(@Param('id') id: string): Promise<User> {
   //     return this.service.recoverByIdBase(id);

@@ -16,6 +16,7 @@ import { LoginDTO, RegisterDTO } from '../../auth/dtos';
 import {
   CreateRolesDTO,
   CreateUserDTO,
+  CreateUsersDTO,
   UpdateRolesDTO,
   UpdateUserDTO,
 } from '../dtos';
@@ -61,7 +62,7 @@ export class UserService extends BaseService<User> {
     return roles;
   }
 
-  async createUser(payload: CreateUserDTO, relations: string[]): Promise<User> {
+  async createUserbyroleid(payload: CreateUserDTO, relations: string[]): Promise<User> {
     const { roles, ...userData } = payload;
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -113,6 +114,63 @@ export class UserService extends BaseService<User> {
 
     return updatedUser;
   }
+
+  async createUserroletitle(payload: CreateUsersDTO, relations: string[]): Promise<User> {
+    const { roles, ...userData } = payload;
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    let createdUser: User = null;
+
+    try {
+      createdUser = await queryRunner.manager.save(
+        Object.assign(new User(), userData)
+      );
+
+      if (!createdUser) {
+        throw new BadRequestException('User not created');
+      }
+
+      if (roles && roles.length) {
+        for (const role of roles) {
+          const existingRole = await this.roleService.findOne({
+            where: { title: role.role },
+          });
+          if (!existingRole) {
+            throw new BadRequestException(`Role with title "${role.role}" not found.`);
+          }
+
+          await queryRunner.manager.save(
+            Object.assign(new UserRole(), {
+              user: createdUser.id,
+              role: existingRole.id,
+            })
+          );
+        }
+      }
+
+      await queryRunner.commitTransaction();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new BadRequestException(error.message || 'User not created');
+    } finally {
+      await queryRunner.release();
+    }
+
+    if (!createdUser) {
+      throw new BadRequestException('User not created');
+    }
+
+    const updatedUser = await this.findOne({
+      where: { id: createdUser.id },
+      relations,
+    });
+
+    return updatedUser;
+  }
+
 
   async updateUser(
     id: string,
